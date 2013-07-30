@@ -32,10 +32,10 @@ refScaleFactor = width / cumulativeRefLength;
 qryScaleFactor = height / cumulativeQryLength;
 
 function scaleX(name, position) {
-  return (Math.floor(refOffSets[name]) + position) * refScaleFactor;
+  return Math.floor((refOffSets[name] + position) * refScaleFactor);
 }
 function scaleY(name, position) {
-  return (Math.floor(qryOffSets[name]) + position) * qryScaleFactor;
+  return Math.floor((qryOffSets[name] + position) * qryScaleFactor);
 }
 
 function drawGrid(c) {
@@ -106,13 +106,14 @@ function getRefName(xPos) {
     var oldName = refName;
     var oldStart = refStart;
     refName = name;
-    refStart = refOffSets[name] * refScaleFactor;
+    refStart = scaleX(name, 0);
     if(refStart > xPos) {
       return {name: oldName, x: oldStart, width: refStart - oldStart};
     }
   }
   return {name: refName, x: refStart, width: cumulativeRefLength * refScaleFactor - refStart};
 }
+
 function getQryName(yPos) {
   var qryName;
   var qryStart;
@@ -125,7 +126,7 @@ function getQryName(yPos) {
     oldName = qryName;
     oldStart = qryStart;
     qryName = name;
-    qryStart = qryOffSets[name] * qryScaleFactor;
+    qryStart = scaleY(name, 0);
     if(qryStart > yPos) {
       return {name: oldName, y: oldStart, height: qryStart - oldStart};
     }
@@ -143,17 +144,14 @@ function mouseMoveListener(e) {
     var mousePos = getCursorPosition(e);
     var ref = getRefName(mousePos.x);
     var qry = getQryName(mousePos.y);
-    overlay.width = width + woff * 2;
+    selectedRegions.update(overlayCtx);
     if(ref && qry) {
-      overlayCtx.fillStyle = "rgba(70,130,80,0.05)";
-      overlayCtx.strokeStyle = "rgba(0,0,0,1)";
-      overlayCtx.lineWidth = 1;
-      var x = Math.floor(ref.x + woff + 0.5) + 0.5;
-      var y = Math.ceil(qry.y + hoff + 0.5) - 0.5;
-      var w = Math.floor(ref.width);
-      var h = Math.floor(qry.height);
+      var x = scaleX(ref.name, 0) + woff;
+      var y = scaleY(qry.name, 0) + hoff;
+      var w = ref.width;
+      var h = qry.height;
+      overlayCtx.fillStyle = "rgba(90,90,90,0.075)";
       overlayCtx.fillRect(x,y,w,h);
-      overlayCtx.strokeRect(x,y,w,h);
     }
   }
 }
@@ -184,7 +182,18 @@ SelectedSet.prototype.toggleBox = function(x,y,w,h,refName,qryName) {
   }
 }
 SelectedSet.prototype.update = function(c) {
-  
+  overlay.width = width + woff * 2;
+    overlayCtx.fillStyle = "rgba(90,90,90,0.075)";
+  overlayCtx.strokeStyle = "rgba(0,0,0,0.5)";
+  overlayCtx.lineWidth = 1;
+  this.regions.forEach(function(r) {
+    var x = scaleX(r.refName, 0) + woff + 0.5;
+    var y = scaleY(r.qryName, 0) + hoff + 0.5;
+    var w = r.width;
+    var h = r.height;
+    overlayCtx.fillRect(x,y,w,h);
+    overlayCtx.strokeRect(x,y,w,h);
+  })
 }
 
 function mouseDownListener(e) {
@@ -203,6 +212,7 @@ function mouseUpListener(e) {
     var qry = getQryName(mousePos.y);
     selectedRegions.toggleBox(ref.x, qry.y, ref.width, qry.height, ref.name, qry.name);
   }
+  selectedRegions.update(overlayCtx);
   console.log("DRAG END: ("  + mousePos.x + "," + mousePos.y + ")");
   dragging = false;
 }
