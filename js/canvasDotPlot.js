@@ -13,7 +13,7 @@ canvas.width = width + woff * 2;
 overlay.width = width + woff * 2;
 
 var delta = new DeltaParser("example-data/stago_lepto.delta");
-//var delta = new DeltaParser("example-data/yeasts.delta");
+var delta = new DeltaParser("example-data/yeasts.delta");
 var refSeqs = delta.refs().sort(function(a,b) {return b.length - a.length;});
 var qrySeqs = delta.qrys().sort(function(a,b) {return a.length - b.length;});
 
@@ -55,11 +55,14 @@ function drawGrid(c) {
     c.lineTo(width,offset);
   }
   
-  c.moveTo(Math.floor(cumulativeRefLength * refScaleFactor),0);
-  c.lineTo(Math.floor(cumulativeRefLength * refScaleFactor),height);
+  var x = Math.floor(cumulativeRefLength * refScaleFactor)
+  var y = Math.floor(cumulativeQryLength * qryScaleFactor)
   
-  c.moveTo(0, Math.floor(cumulativeQryLength * qryScaleFactor));
-  c.lineTo(width, Math.floor(cumulativeQryLength * qryScaleFactor));
+  c.moveTo(x, 0);
+  c.lineTo(x, height);
+  
+  c.moveTo(0, y);
+  c.lineTo(width, y);
   
   c.stroke();
   c.restore();
@@ -130,26 +133,88 @@ function getQryName(yPos) {
   return {name: qryName, y: qryStart, height: cumulativeQryLength * qryScaleFactor - qryStart};
 }
 
-
-function mouseTest(e) {
-  var mousePos = getCursorPosition(e);
-  var ref = getRefName(mousePos.x);
-  var qry = getQryName(mousePos.y);
-  overlay.width = width + woff * 2;
-  if(ref && qry) {
-    overlayCtx.fillStyle = "rgba(70,130,80,0.05)";
-    overlayCtx.strokeStyle = "rgba(0,0,0,0.5)";
-    overlayCtx.lineWidth = 1;
-    var x = Math.floor(ref.x + woff + 0.5) + 0.5;
-    var y = Math.ceil(qry.y + hoff + 0.5) - 0.5;
-    var w = Math.floor(ref.width);
-    var h = Math.floor(qry.height);
-    overlayCtx.fillRect(x,y,w,h);
-    overlayCtx.strokeRect(x,y,w,h);
+function mouseMoveListener(e) {
+  if(dragging) {
+    overlay.width = width + woff * 2;
+    var mousePos = getCursorPosition(e);
+    drag.moved = true;
+    console.log("DRAG");
+  } else {
+    var mousePos = getCursorPosition(e);
+    var ref = getRefName(mousePos.x);
+    var qry = getQryName(mousePos.y);
+    overlay.width = width + woff * 2;
+    if(ref && qry) {
+      overlayCtx.fillStyle = "rgba(70,130,80,0.05)";
+      overlayCtx.strokeStyle = "rgba(0,0,0,1)";
+      overlayCtx.lineWidth = 1;
+      var x = Math.floor(ref.x + woff + 0.5) + 0.5;
+      var y = Math.ceil(qry.y + hoff + 0.5) - 0.5;
+      var w = Math.floor(ref.width);
+      var h = Math.floor(qry.height);
+      overlayCtx.fillRect(x,y,w,h);
+      overlayCtx.strokeRect(x,y,w,h);
+    }
   }
 }
-    
+
+function SelectedSet() {
+  this.regions = []
+}
+
+SelectedSet.prototype.addBox = function(x,y,w,h,refName, qryName){
+  this.regions.push({x:x, y:y, width:w, height:h, refName:refName, qryName:qryName});
+}
+
+SelectedSet.prototype.removeBox = function(x,y) {
+  this.regions = this.regions.filter(function(box) {
+    return !(box.x == x && box.y == y); 
+  })
+}
+
+SelectedSet.prototype.toggleBox = function(x,y,w,h,refName,qryName) {
+  var present = this.regions.some(function(box, i, a) {
+    return box.x == x && box.y == y; 
+  })
+  
+  if(present) {
+    this.removeBox(x,y);
+  } else {
+    this.addBox(x,y,w,h,refName, qryName);
+  }
+}
+SelectedSet.prototype.update = function(c) {
+  
+}
+
+function mouseDownListener(e) {
+  var mousePos = getCursorPosition(e);
+  console.log("DRAG START: ("  + mousePos.x + "," + mousePos.y + ")");
+  dragging = true;
+  drag = {};
+  drag.x = mousePos.x;
+  drag.y = mousePos.y;
+}
+
+function mouseUpListener(e) {
+  var mousePos = getCursorPosition(e);
+  if(!drag.moved) {
+    var ref = getRefName(mousePos.x);
+    var qry = getQryName(mousePos.y);
+    selectedRegions.toggleBox(ref.x, qry.y, ref.width, qry.height, ref.name, qry.name);
+  }
+  console.log("DRAG END: ("  + mousePos.x + "," + mousePos.y + ")");
+  dragging = false;
+}
+
+var selectedRegions = new SelectedSet();
+var dragging = false;
+var drag = {};
+
+canvas.addEventListener("mousemove", mouseMoveListener);
+canvas.addEventListener("mousedown", mouseDownListener);
+canvas.addEventListener("mouseup", mouseUpListener);
+
 clipPaths(ctx);
 drawGrid(ctx);
 drawHits(ctx);
-canvas.addEventListener("mousemove", mouseTest, false);
