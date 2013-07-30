@@ -13,17 +13,18 @@ canvas.width = width + woff * 2;
 overlay.width = width + woff * 2;
 
 var delta = new DeltaParser("example-data/stago_lepto.delta");
-var delta = new DeltaParser("example-data/yeasts.delta");
+//var delta = new DeltaParser("example-data/yeasts.delta");
 var refSeqs = delta.refs().sort(function(a,b) {return b.length - a.length;});
 var qrySeqs = delta.qrys().sort(function(a,b) {return a.length - b.length;});
 
+
 var refOffSets = {};
-cumulativeRefLength = refSeqs.reduce(function(p,c,i,a) {
+var qryOffSets = {};
+var cumulativeRefLength = refSeqs.reduce(function(p,c,i,a) {
   refOffSets[c.name] = p;
   return p + c.length;
 }, 0);
-var qryOffSets = {};
-cumulativeQryLength = qrySeqs.reduce(function(p,c,i,a) {
+var cumulativeQryLength = qrySeqs.reduce(function(p,c,i,a) {
   qryOffSets[c.name] = p;
   return p + c.length;
 }, 0);
@@ -41,7 +42,7 @@ function scaleY(name, position) {
 function drawGrid(c) {
   c.save();
   c.translate(woff + 0.5, hoff + 0.5);
-  c.strokeStyle = "rgba(90,90,90,0.15)";
+  c.strokeStyle = "rgba(90,90,90,0.1)";
   c.beginPath();
 
   for(var name in refOffSets) {
@@ -77,6 +78,7 @@ function drawHits(c) {
     c.moveTo(scaleX(hit.rname,hit.rstart) - 0.25, scaleY(hit.qname, hit.qstart) - 0.25);
     c.lineTo(scaleX(hit.rname,hit.rend) + 0.25 , scaleY(hit.qname, hit.qend) + 0.25);
     c.strokeStyle = hit.qend > hit.qstart ? "blue" : "red";
+//    c.strokeStyle = hit.qend > hit.qstart ? "rgb(103, 169, 207)" : "rgb(239, 138, 98)";
     c.stroke();
   });
   
@@ -136,7 +138,7 @@ function getQryName(yPos) {
 
 function mouseMoveListener(e) {
   if(dragging) {
-    overlay.width = width + woff * 2;
+    //overlay.width = width + woff * 2;
     var mousePos = getCursorPosition(e);
     drag.moved = true;
     console.log("DRAG");
@@ -215,6 +217,10 @@ function mouseUpListener(e) {
   selectedRegions.update(overlayCtx);
   console.log("DRAG END: ("  + mousePos.x + "," + mousePos.y + ")");
   dragging = false;
+}
+
+function zoomPlot(xstart, xend, ystart, yend) {
+  
 }
 
 var selectedRegions = new SelectedSet();
