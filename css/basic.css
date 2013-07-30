@@ -1,0 +1,14 @@
+.selected {
+    fill: rgb(41, 255, 0);
+    stroke-width: 2px;
+}
+
+.brush .extent {
+    fill-opacity: 0.1;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.seqBlock {
+    fill: steelblue;
+}
