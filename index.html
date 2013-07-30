@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>Comparative-sketch</title>
+    <link rel="stylesheet" href="css/basic.css">
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/skeleton.css">
     <link rel="stylesheet" href="css/layout.css">
@@ -16,10 +17,11 @@
         <h1 style="margin-top: 40px">Comparative-sketch</h1>
         <h5>Interactive nucmer vis</h5>
         <hr>
-        <canvas id="dotPlotCanvas"></canvas>
+        <div style="position: relative">
+        <canvas id="dotPlotOverlay" class="dotPlot"></canvas>
+        <canvas id="dotPlotCanvas" class="dotPlot"></canvas>
+        </div>
       </div>
-      <svg id="chart"></svg>
-      <svg id="comparison"></svg>
     </div>
     <script type="text/javascript" src="js/canvasDotPlot.js"></script>
   </body>

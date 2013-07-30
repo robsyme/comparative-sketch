@@ -1,3 +1,9 @@
+.dotPlot {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
 .selected {
     fill: rgb(41, 255, 0);
     stroke-width: 2px;
