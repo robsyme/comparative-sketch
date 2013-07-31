@@ -48,8 +48,8 @@ function ViewExtents(x,y,w,h) {
 
 var currentViewExtents = new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)
 var viewStack = [new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength),new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)];
-var AnimLength = 20;
-var AnimLengthOut = 10;
+var AnimLengthIn = 10;
+var AnimLengthOut = 5;
 var animationCountDown = 0;
 
 var zoomout = function() {
@@ -60,17 +60,12 @@ var zoomout = function() {
 }
 var zoomin = function() {
   if(animationCountDown < 0) {return true;}
-  var animFrac = animationCountDown--/AnimLength;
+  var animFrac = animationCountDown--/AnimLengthIn;
   var easedFrac = d3.ease('cubic')(animFrac);
   render(easedFrac);
 }
 
-var render = function(easedFrac) {
-  //if(animationCountDown <= 0) {return true;}
-  
-  //var animFrac = animationCountDown--/AnimLength;
-  //var easedFrac = d3.ease('cubic')(animFrac);
-  
+var render = function(easedFrac) {  
   currentViewExtents.x = d3.interpolate(viewStack[0].x,viewStack[1].x)(easedFrac);
   currentViewExtents.y = d3.interpolate(viewStack[0].y,viewStack[1].y)(easedFrac);
   currentViewExtents.width = d3.interpolate(viewStack[0].width,viewStack[1].width)(easedFrac);
@@ -281,14 +276,14 @@ function mouseMoveListener(e) {
 
 function mouseUpListener(e) {
   var mousePos = getCursorPosition(e);
-  if(!drag.moved) {
+  if(e.button == 0) {
     // Clicking on a box.
     var ref = getRefName(mousePos.x);
     var qry = getQryName(mousePos.y);
     selectedRegions.toggleBox(ref.x, qry.y, ref.width, qry.height, ref.name, qry.name);
   } else if (e.button == 1) {
     // Initiate zoom
-    animationCountDown = AnimLength;
+    animationCountDown = AnimLengthIn;
     var x = viewStack[0].x + Math.min(drag.x, mousePos.x) / refScaleFactor;
     var w = Math.abs(mousePos.x - drag.x) / refScaleFactor;
     var y = viewStack[0].y + (height - Math.max(drag.y, mousePos.y)) / qryScaleFactor;
