@@ -13,7 +13,7 @@ canvas.width = width + woff * 2;
 overlay.width = width + woff * 2;
 
 var delta = new DeltaParser("example-data/stago_lepto.delta");
-//var delta = new DeltaParser("example-data/yeasts.delta");
+var delta = new DeltaParser("example-data/yeasts.delta");
 var refSeqs = delta.refs().sort(function(a,b) {return b.length - a.length;});
 var qrySeqs = delta.qrys().sort(function(a,b) {return b.length - a.length;});
 
@@ -47,15 +47,29 @@ function ViewExtents(x,y,w,h) {
 }
 
 var currentViewExtents = new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)
-var viewStack = [currentViewExtents];
-var AnimLength = 20
+var viewStack = [new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength),new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)];
+var AnimLength = 20;
+var AnimLengthOut = 10;
 var animationCountDown = 0;
 
-var render = function() {
-  if(animationCountDown <= 0) {return true;}
-  
+var zoomout = function() {
+  if(animationCountDown < 0) {viewStack.shift();return true;}
+  var animFrac = animationCountDown--/AnimLengthOut;
+  var easedFrac = d3.ease('cubic')(1 - animFrac);
+  render(easedFrac);
+}
+var zoomin = function() {
+  if(animationCountDown < 0) {return true;}
   var animFrac = animationCountDown--/AnimLength;
   var easedFrac = d3.ease('cubic')(animFrac);
+  render(easedFrac);
+}
+
+var render = function(easedFrac) {
+  //if(animationCountDown <= 0) {return true;}
+  
+  //var animFrac = animationCountDown--/AnimLength;
+  //var easedFrac = d3.ease('cubic')(animFrac);
   
   currentViewExtents.x = d3.interpolate(viewStack[0].x,viewStack[1].x)(easedFrac);
   currentViewExtents.y = d3.interpolate(viewStack[0].y,viewStack[1].y)(easedFrac);
@@ -80,7 +94,7 @@ ctx.clearRect(0, 0, canvas.width, canvas.height);
 drawGrid(ctx);
 drawHits(ctx);
 
-d3.timer(render);
+d3.timer(zoomin);
   
 function scaleX(name, position) {
   return Math.floor((refOffSets[name] + position - currentViewExtents.x) * refScaleFactor);
@@ -112,8 +126,6 @@ function drawGrid(c) {
     c.moveTo(zeroX,offset);
     c.lineTo(maxX,offset);
   }
-  
-  console.log(currentViewExtents.y);
   
   c.moveTo(maxX, zeroY);
   c.lineTo(maxX, height);
@@ -240,7 +252,6 @@ SelectedSet.prototype.update = function(c) {
 
 function mouseDownListener(e) {
   var mousePos = getCursorPosition(e);
-  console.log("DRAG START: ("  + (mousePos.x / refScaleFactor) + "," + (mousePos.y / qryScaleFactor) + ")");
   dragging = true;
   drag = {};
   drag.x = mousePos.x;
@@ -283,10 +294,9 @@ function mouseUpListener(e) {
     var y = viewStack[0].y + (height - Math.max(drag.y, mousePos.y)) / qryScaleFactor;
     var h = Math.abs(mousePos.y - drag.y) / qryScaleFactor;
     viewStack.unshift(new ViewExtents(x,y,w,h));
-    d3.timer(render);
+    d3.timer(zoomin);
   }
   selectedRegions.update(overlayCtx);
-  console.log("DRAG END: ("  + (mousePos.x / refScaleFactor) + "," + (mousePos.y / qryScaleFactor) + ")");
   dragging = false;
 }
 
@@ -297,4 +307,11 @@ var drag = {};
 canvas.addEventListener("mousemove", mouseMoveListener);
 canvas.addEventListener("mousedown", mouseDownListener);
 canvas.addEventListener("mouseup", mouseUpListener);
-
+document.body.addEventListener('keyup', function(e) {
+  if(e.which == 80 && viewStack.length > 1) {
+    // Initiate zoom
+    console.log(viewStack);
+    animationCountDown = AnimLengthOut;
+    d3.timer(zoomout);
+  }
+});
