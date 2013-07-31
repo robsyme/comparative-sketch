@@ -23,10 +23,21 @@ var cumulativeRefLength = refSeqs.reduce(function(p,c,i,a) {
   refOffSets[c.name] = p;
   return p + c.length;
 }, 0);
+refOffSets["final"] = cumulativeRefLength;
 var cumulativeQryLength = qrySeqs.reduce(function(p,c,i,a) {
   qryOffSets[c.name] = p;
   return p + c.length;
 }, 0);
+qryOffSets["final"] = cumulativeQryLength;
+
+
+var requestAnimationFrame =  
+        window.requestAnimationFrame || window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame || window.msRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        function(callback) {
+          return setTimeout(callback, 1);
+        };
 
 function ViewExtents(x,y,w,h) {
   this.x = x;
@@ -35,67 +46,80 @@ function ViewExtents(x,y,w,h) {
   this.height = h;
 }
 
-var viewStack = [new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)];
+var currentViewExtents = new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)
+var viewStack = [currentViewExtents];
+var AnimLength = 20
+var animationCountDown = 0;
 
-var requestAnimationFrame =  
-        window.requestAnimationFrame ||
-        window.webkitRequestAnimationFrame ||
-        window.mozRequestAnimationFrame ||
-        window.msRequestAnimationFrame ||
-        window.oRequestAnimationFrame ||
-        function(callback) {
-          return setTimeout(callback, 1);
-        };
-
-var scaleX;
-var scaleY;
-
-function render() {
-  refScaleFactor = width / viewStack[0].width;
-  qryScaleFactor = height / viewStack[0].height;
-
-  scaleX = function(name, position) {
-    return Math.floor((refOffSets[name] + position - viewStack[0].x) * refScaleFactor);
-  }
-  scaleY = function(name, position) {
-    return Math.floor(height - (qryOffSets[name] + position - viewStack[0].y) * qryScaleFactor);
-  }
-
+var render = function() {
+  if(animationCountDown <= 0) {return true;}
+  
+  var animFrac = animationCountDown--/AnimLength;
+  var easedFrac = d3.ease('cubic')(animFrac);
+  
+  currentViewExtents.x = d3.interpolate(viewStack[0].x,viewStack[1].x)(easedFrac);
+  currentViewExtents.y = d3.interpolate(viewStack[0].y,viewStack[1].y)(easedFrac);
+  currentViewExtents.width = d3.interpolate(viewStack[0].width,viewStack[1].width)(easedFrac);
+  currentViewExtents.height = d3.interpolate(viewStack[0].height,viewStack[1].height)(easedFrac);
+  
+  refScaleFactor = width / currentViewExtents.width;
+  qryScaleFactor = height / currentViewExtents.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid(ctx);
   drawHits(ctx);
+  selectedRegions.update(overlayCtx);
+  return false;
 }
 
 clipPaths(ctx);
 clipPaths(overlayCtx);
-d3.timer(render);
 
+refScaleFactor = width / currentViewExtents.width;
+qryScaleFactor = height / currentViewExtents.height;
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+drawGrid(ctx);
+drawHits(ctx);
+
+d3.timer(render);
   
+function scaleX(name, position) {
+  return Math.floor((refOffSets[name] + position - currentViewExtents.x) * refScaleFactor);
+};
+
+function scaleY(name, position) {
+    return Math.floor(height - (qryOffSets[name] + position - currentViewExtents.y) * qryScaleFactor);
+}
+
 function drawGrid(c) {
   c.save();
   c.translate(woff + 0.5, hoff + 0.5);
   c.strokeStyle = "rgba(90,90,90,0.1)";
   c.beginPath();
-
+  
+  var zeroX = currentViewExtents.x * refScaleFactor * -1;
+  var zeroY = height - (cumulativeQryLength - currentViewExtents.y) * qryScaleFactor;
+  
+  var maxX = width - (currentViewExtents.x + currentViewExtents.width - cumulativeRefLength) * refScaleFactor;
+  var maxY = height + currentViewExtents.y * qryScaleFactor;
+  
   for(var name in refOffSets) {
     var offset = scaleX(name, 0);
-    c.moveTo(offset,0);
-    c.lineTo(offset,height);
+    c.moveTo(offset,zeroY);
+    c.lineTo(offset,maxY);
   }
   for (var name in qryOffSets) {
     var offset = scaleY(name, 0);
-    c.moveTo(0,offset);
-    c.lineTo(width,offset);
+    c.moveTo(zeroX,offset);
+    c.lineTo(maxX,offset);
   }
   
-  var x = Math.floor(cumulativeRefLength * refScaleFactor)
-  var y = Math.floor(cumulativeQryLength * qryScaleFactor)
+  console.log(currentViewExtents.y);
   
-  c.moveTo(x, 0);
-  c.lineTo(x, height);
+  c.moveTo(maxX, zeroY);
+  c.lineTo(maxX, height);
   
-  c.moveTo(0, y);
-  c.lineTo(width, y);
+  c.moveTo(zeroX, maxY);
+  c.lineTo(maxX, maxY);
   
   c.stroke();
   c.restore();
@@ -132,19 +156,21 @@ function getCursorPosition(e) {
 function getRefName(xPos) {
   var refName;
   var refStart;
-  if(xPos < 0 || xPos > cumulativeRefLength * refScaleFactor) {
+  // Switch to base pair coords
+  xPos = xPos / refScaleFactor + currentViewExtents.x;
+  if(xPos < 0 || xPos > cumulativeRefLength) {
     return ;
   }
   for(var name in refOffSets) {
     var oldName = refName;
     var oldStart = refStart;
     refName = name;
-    refStart = scaleX(name, 0);
+    refStart = refOffSets[name];
     if(refStart > xPos) {
       return {name: oldName, x: oldStart, width: refStart - oldStart};
     }
   }
-  return {name: refName, x: refStart, width: cumulativeRefLength * refScaleFactor - refStart};
+  return {name: refName, x: refStart, width: cumulativeRefLength - refStart};
 }
 
 function getQryName(yPos) {
@@ -152,40 +178,21 @@ function getQryName(yPos) {
   var qryStart;
   var oldName;
   var oldStart = 0;
-  if(yPos < 0 || yPos > cumulativeQryLength * qryScaleFactor) {
+  // Switch to base pair coords
+  yPos = (height - yPos) / qryScaleFactor + currentViewExtents.y;
+  if(yPos < 0 || yPos > cumulativeQryLength) {
     return ;
   }
   for(var name in qryOffSets) {
     oldName = qryName;
     oldStart = qryStart;
     qryName = name;
-    qryStart = scaleY(name, 0);
-    if(qryStart < yPos) {
+    qryStart = qryOffSets[name];
+    if(qryStart > yPos) {
       return {name: oldName, y: oldStart, height: qryStart - oldStart};
     }
   }
-  return {name: qryName, y: qryStart, height: cumulativeQryLength * qryScaleFactor - qryStart};
-}
-
-function mouseMoveListener(e) {
-  if(dragging) {
-    var mousePos = getCursorPosition(e);
-    drag.moved = true;
-    console.log("DRAG");
-  } else {
-    var mousePos = getCursorPosition(e);
-    var ref = getRefName(mousePos.x);
-    var qry = getQryName(mousePos.y);
-    selectedRegions.update(overlayCtx);
-    if(ref && qry) {
-      var x = scaleX(ref.name, 0) + woff;
-      var y = scaleY(qry.name, 0) + hoff;
-      var w = ref.width;
-      var h = qry.height;
-      overlayCtx.fillStyle = "rgba(90,90,90,0.075)";
-      overlayCtx.fillRect(x,y,w,h);
-    }
-  }
+  return {name: qryName, y: qryStart, height: cumulativeQryLength - qryStart};
 }
 
 function SelectedSet() {
@@ -214,18 +221,21 @@ SelectedSet.prototype.toggleBox = function(x,y,w,h,refName,qryName) {
   }
 }
 SelectedSet.prototype.update = function(c) {
+  c.save();
+  c.translate(woff + 0.5, hoff + 0.5);
   overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
   overlayCtx.fillStyle = "rgba(90,90,90,0.075)";
   overlayCtx.strokeStyle = "rgba(0,0,0,0.5)";
   overlayCtx.lineWidth = 1;
   this.regions.forEach(function(r) {
-    var x = scaleX(r.refName, 0) + woff + 0.5;
-    var y = scaleY(r.qryName, 0) + hoff + 0.5;
-    var w = r.width;
-    var h = r.height;
+    var x = scaleX(r.refName, 0);
+    var y = scaleY(r.qryName, 0);
+    var w = r.width * refScaleFactor;
+    var h = r.height * qryScaleFactor * -1;
     overlayCtx.fillRect(x,y,w,h);
     overlayCtx.strokeRect(x,y,w,h);
   })
+  c.restore();
 }
 
 function mouseDownListener(e) {
@@ -237,19 +247,43 @@ function mouseDownListener(e) {
   drag.y = mousePos.y;
 }
 
+function mouseMoveListener(e) {
+  if(dragging) {
+    drag.moved = true;
+    //var mousePos = getCursorPosition(e);
+    
+  } else {
+    var mousePos = getCursorPosition(e);
+    var ref = getRefName(mousePos.x);
+    var qry = getQryName(mousePos.y);
+    selectedRegions.update(overlayCtx);
+    if(ref && qry) {
+      var x = scaleX(ref.name, 0) + woff;
+      var y = scaleY(qry.name, 0) + hoff;
+      var w = ref.width * refScaleFactor;
+      var h = qry.height * qryScaleFactor * -1;
+      overlayCtx.fillStyle = "rgba(90,90,90,0.075)";
+      overlayCtx.fillRect(x,y,w,h);
+    }
+  }
+}
+
 function mouseUpListener(e) {
   var mousePos = getCursorPosition(e);
   if(!drag.moved) {
+    // Clicking on a box.
     var ref = getRefName(mousePos.x);
     var qry = getQryName(mousePos.y);
     selectedRegions.toggleBox(ref.x, qry.y, ref.width, qry.height, ref.name, qry.name);
-  } else {
+  } else if (e.button == 1) {
+    // Initiate zoom
+    animationCountDown = AnimLength;
     var x = viewStack[0].x + Math.min(drag.x, mousePos.x) / refScaleFactor;
     var w = Math.abs(mousePos.x - drag.x) / refScaleFactor;
     var y = viewStack[0].y + (height - Math.max(drag.y, mousePos.y)) / qryScaleFactor;
     var h = Math.abs(mousePos.y - drag.y) / qryScaleFactor;
     viewStack.unshift(new ViewExtents(x,y,w,h));
-    console.log(Math.min(drag.y, mousePos.y) / qryScaleFactor)
+    d3.timer(render);
   }
   selectedRegions.update(overlayCtx);
   console.log("DRAG END: ("  + (mousePos.x / refScaleFactor) + "," + (mousePos.y / qryScaleFactor) + ")");
