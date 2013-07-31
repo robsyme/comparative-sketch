@@ -13,10 +13,9 @@ canvas.width = width + woff * 2;
 overlay.width = width + woff * 2;
 
 var delta = new DeltaParser("example-data/stago_lepto.delta");
-//var delta = new DeltaParser("example-data/yeasts.delta");
+var delta = new DeltaParser("example-data/yeasts.delta");
 var refSeqs = delta.refs().sort(function(a,b) {return b.length - a.length;});
-var qrySeqs = delta.qrys().sort(function(a,b) {return a.length - b.length;});
-
+var qrySeqs = delta.qrys().sort(function(a,b) {return b.length - a.length;});
 
 var refOffSets = {};
 var qryOffSets = {};
@@ -36,7 +35,7 @@ function scaleX(name, position) {
   return Math.floor((refOffSets[name] + position) * refScaleFactor);
 }
 function scaleY(name, position) {
-  return Math.floor((qryOffSets[name] + position) * qryScaleFactor);
+  return Math.floor(height - (qryOffSets[name] + position) * qryScaleFactor);
 }
 
 function drawGrid(c) {
@@ -129,7 +128,7 @@ function getQryName(yPos) {
     oldStart = qryStart;
     qryName = name;
     qryStart = scaleY(name, 0);
-    if(qryStart > yPos) {
+    if(qryStart < yPos) {
       return {name: oldName, y: oldStart, height: qryStart - oldStart};
     }
   }
