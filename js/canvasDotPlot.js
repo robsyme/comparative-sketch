@@ -13,7 +13,7 @@ canvas.width = width + woff * 2;
 overlay.width = width + woff * 2;
 
 var delta = new DeltaParser("example-data/stago_lepto.delta");
-var delta = new DeltaParser("example-data/yeasts.delta");
+//var delta = new DeltaParser("example-data/yeasts.delta");
 var refSeqs = delta.refs().sort(function(a,b) {return b.length - a.length;});
 var qrySeqs = delta.qrys().sort(function(a,b) {return b.length - a.length;});
 
@@ -28,16 +28,49 @@ var cumulativeQryLength = qrySeqs.reduce(function(p,c,i,a) {
   return p + c.length;
 }, 0);
 
-refScaleFactor = width / cumulativeRefLength;
-qryScaleFactor = height / cumulativeQryLength;
-
-function scaleX(name, position) {
-  return Math.floor((refOffSets[name] + position) * refScaleFactor);
-}
-function scaleY(name, position) {
-  return Math.floor(height - (qryOffSets[name] + position) * qryScaleFactor);
+function ViewExtents(x,y,w,h) {
+  this.x = x;
+  this.y = y;
+  this.width = w;
+  this.height = h;
 }
 
+var viewStack = [new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)];
+
+var requestAnimationFrame =  
+        window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        function(callback) {
+          return setTimeout(callback, 1);
+        };
+
+var scaleX;
+var scaleY;
+
+function render() {
+  refScaleFactor = width / viewStack[0].width;
+  qryScaleFactor = height / viewStack[0].height;
+
+  scaleX = function(name, position) {
+    return Math.floor((refOffSets[name] + position - viewStack[0].x) * refScaleFactor);
+  }
+  scaleY = function(name, position) {
+    return Math.floor(height - (qryOffSets[name] + position - viewStack[0].y) * qryScaleFactor);
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid(ctx);
+  drawHits(ctx);
+}
+
+clipPaths(ctx);
+clipPaths(overlayCtx);
+d3.timer(render);
+
+  
 function drawGrid(c) {
   c.save();
   c.translate(woff + 0.5, hoff + 0.5);
@@ -77,7 +110,6 @@ function drawHits(c) {
     c.moveTo(scaleX(hit.rname,hit.rstart) - 0.25, scaleY(hit.qname, hit.qstart) - 0.25);
     c.lineTo(scaleX(hit.rname,hit.rend) + 0.25 , scaleY(hit.qname, hit.qend) + 0.25);
     c.strokeStyle = hit.qend > hit.qstart ? "blue" : "red";
-//    c.strokeStyle = hit.qend > hit.qstart ? "rgb(103, 169, 207)" : "rgb(239, 138, 98)";
     c.stroke();
   });
   
@@ -137,7 +169,6 @@ function getQryName(yPos) {
 
 function mouseMoveListener(e) {
   if(dragging) {
-    //overlay.width = width + woff * 2;
     var mousePos = getCursorPosition(e);
     drag.moved = true;
     console.log("DRAG");
@@ -183,8 +214,8 @@ SelectedSet.prototype.toggleBox = function(x,y,w,h,refName,qryName) {
   }
 }
 SelectedSet.prototype.update = function(c) {
-  overlay.width = width + woff * 2;
-    overlayCtx.fillStyle = "rgba(90,90,90,0.075)";
+  overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+  overlayCtx.fillStyle = "rgba(90,90,90,0.075)";
   overlayCtx.strokeStyle = "rgba(0,0,0,0.5)";
   overlayCtx.lineWidth = 1;
   this.regions.forEach(function(r) {
@@ -199,7 +230,7 @@ SelectedSet.prototype.update = function(c) {
 
 function mouseDownListener(e) {
   var mousePos = getCursorPosition(e);
-  console.log("DRAG START: ("  + mousePos.x + "," + mousePos.y + ")");
+  console.log("DRAG START: ("  + (mousePos.x / refScaleFactor) + "," + (mousePos.y / qryScaleFactor) + ")");
   dragging = true;
   drag = {};
   drag.x = mousePos.x;
@@ -212,14 +243,17 @@ function mouseUpListener(e) {
     var ref = getRefName(mousePos.x);
     var qry = getQryName(mousePos.y);
     selectedRegions.toggleBox(ref.x, qry.y, ref.width, qry.height, ref.name, qry.name);
+  } else {
+    var x = viewStack[0].x + Math.min(drag.x, mousePos.x) / refScaleFactor;
+    var w = Math.abs(mousePos.x - drag.x) / refScaleFactor;
+    var y = viewStack[0].y + (height - Math.max(drag.y, mousePos.y)) / qryScaleFactor;
+    var h = Math.abs(mousePos.y - drag.y) / qryScaleFactor;
+    viewStack.unshift(new ViewExtents(x,y,w,h));
+    console.log(Math.min(drag.y, mousePos.y) / qryScaleFactor)
   }
   selectedRegions.update(overlayCtx);
-  console.log("DRAG END: ("  + mousePos.x + "," + mousePos.y + ")");
+  console.log("DRAG END: ("  + (mousePos.x / refScaleFactor) + "," + (mousePos.y / qryScaleFactor) + ")");
   dragging = false;
-}
-
-function zoomPlot(xstart, xend, ystart, yend) {
-  
 }
 
 var selectedRegions = new SelectedSet();
@@ -230,6 +264,3 @@ canvas.addEventListener("mousemove", mouseMoveListener);
 canvas.addEventListener("mousedown", mouseDownListener);
 canvas.addEventListener("mouseup", mouseUpListener);
 
-clipPaths(ctx);
-drawGrid(ctx);
-drawHits(ctx);
