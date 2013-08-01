@@ -3,6 +3,10 @@ woff = 20;
 height = 500;
 hoff = 20;
 
+// Create two canvas contexts - one to plot the matches (often static),
+//  and one that we'll redraw whenever the mouse moves. The dotplot canvas
+//  draws thousands of hits, so I want to minimise the number of times
+//  that gets redrawn.
 var overlay = document.getElementById("dotPlotOverlay")
 var overlayCtx = overlay.getContext("2d");
 var canvas = document.getElementById("dotPlotCanvas")
@@ -12,11 +16,13 @@ overlay.height = height + hoff * 2;
 canvas.width = width + woff * 2;
 overlay.width = width + woff * 2;
 
+// Open the delta file and parse the hits.
 var delta = new DeltaParser("example-data/stago_lepto.delta");
 var delta = new DeltaParser("example-data/yeasts.delta");
 var refSeqs = delta.refs().sort(function(a,b) {return b.length - a.length;});
 var qrySeqs = delta.qrys().sort(function(a,b) {return b.length - a.length;});
 
+// Create an index of where each sequence starts (in bp)
 var refOffSets = {};
 var qryOffSets = {};
 var cumulativeRefLength = refSeqs.reduce(function(p,c,i,a) {
@@ -30,14 +36,25 @@ var cumulativeQryLength = qrySeqs.reduce(function(p,c,i,a) {
 }, 0);
 qryOffSets["final"] = cumulativeQryLength;
 
-var requestAnimationFrame =  
-          window.requestAnimationFrame || window.webkitRequestAnimationFrame ||
-        window.mozRequestAnimationFrame || window.msRequestAnimationFrame ||
-        window.oRequestAnimationFrame ||
-        function(callback) {
-          return setTimeout(callback, 1);
-        };
+// Colour in between the lines.
+clipPaths(ctx);
+clipPaths(overlayCtx);
 
+// Set up the stack with two ViewExtents that hold the whole plot.
+var currentViewExtents = new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)
+var viewStack = [new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength),new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)];
+
+// Set up the initial scale factors to convert base space to coords.
+refScaleFactor = width / currentViewExtents.width;
+qryScaleFactor = height / currentViewExtents.height;
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+// Draw the first grid.
+drawGrid(ctx);
+drawHits(ctx);
+
+// I keep a stack of ViewExtents objects that can moved up and down (like mummerplot)
+//  The ViewExtents object keeps track of which part of the figure is drawn.
 function ViewExtents(x,y,w,h) {
   this.x = x;
   this.y = y;
@@ -45,9 +62,7 @@ function ViewExtents(x,y,w,h) {
   this.height = h;
 }
 
-var currentViewExtents = new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)
-var viewStack = [new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength),new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)];
-
+// Animate to the second ViewExtents in the stack. Shift the first ViewExtents off the stack when done. 
 var zoomout = function(duration) {
   var start = new Date().getTime();
   var end = start + duration;
@@ -67,6 +82,8 @@ var zoomout = function(duration) {
   }
   d3.timer(step);
 }
+
+// Zoom in from the currentViewExtents to the one at the top of the stack.
 var zoomin = function(duration) {
   var start = new Date().getTime();
   var end = start + duration;
@@ -81,7 +98,8 @@ var zoomin = function(duration) {
   d3.timer(step);
 }
 
-var render = function(easedFrac) {  
+// Re-render the current dotplot using the currentViewExtents.
+  function render(easedFrac) {  
   currentViewExtents.x = d3.interpolate(viewStack[0].x,viewStack[1].x)(easedFrac);
   currentViewExtents.y = d3.interpolate(viewStack[0].y,viewStack[1].y)(easedFrac);
   currentViewExtents.width = d3.interpolate(viewStack[0].width,viewStack[1].width)(easedFrac);
@@ -96,23 +114,15 @@ var render = function(easedFrac) {
   return false;
 }
 
-clipPaths(ctx);
-clipPaths(overlayCtx);
-
-refScaleFactor = width / currentViewExtents.width;
-qryScaleFactor = height / currentViewExtents.height;
-ctx.clearRect(0, 0, canvas.width, canvas.height);
-drawGrid(ctx);
-drawHits(ctx);
-  
+// Converts a base position into a pixel coordinate.
 function scaleX(name, position) {
   return Math.floor((refOffSets[name] + position - currentViewExtents.x) * refScaleFactor);
 };
-
 function scaleY(name, position) {
     return Math.floor(height - (qryOffSets[name] + position - currentViewExtents.y) * qryScaleFactor);
 }
 
+// Draw the grid lines that mark where sequences start and end.
 function drawGrid(c) {
   c.save();
   c.translate(woff + 0.5, hoff + 0.5);
@@ -146,6 +156,7 @@ function drawGrid(c) {
   c.restore();
 }
 
+// Draw each of the hits.
 function drawHits(c) {
   c.save();
   c.translate(woff + 0.5, hoff + 0.5);
@@ -161,12 +172,14 @@ function drawHits(c) {
   c.restore();
 }
 
+// Clip the given context to the basic rect of width and height (with offset)
 function clipPaths(c) {
   c.beginPath();
   c.rect(woff, hoff, width + 0.5, height + 0.5);
   c.clip();
 }
 
+// Given a mouse event, it returns the xy position relative to the basic rect (including offsets).
 function getCursorPosition(e) {
   var rect = canvas.getBoundingClientRect();
   var x = e.clientX - rect.left - woff - 1;
@@ -174,6 +187,7 @@ function getCursorPosition(e) {
   return {x:x,y:y};
 }
 
+// What is the reference sequence under the given x coordinate?
 function getRefName(xPos) {
   var refName;
   var refStart;
@@ -194,6 +208,7 @@ function getRefName(xPos) {
   return {name: refName, x: refStart, width: cumulativeRefLength - refStart};
 }
 
+// What is the query sequence under the given y coordinate?
 function getQryName(yPos) {
   var qryName;
   var qryStart;
@@ -216,6 +231,7 @@ function getQryName(yPos) {
   return {name: qryName, y: qryStart, height: cumulativeQryLength - qryStart};
 }
 
+// Some scrappy OO javascript to hold the names of the currently selected sequences.
 function SelectedSet() {
   this.regions = []
 }
@@ -234,13 +250,13 @@ SelectedSet.prototype.toggleBox = function(x,y,w,h,refName,qryName) {
   var present = this.regions.some(function(box, i, a) {
     return box.x == x && box.y == y; 
   })
-  
   if(present) {
     this.removeBox(x,y);
   } else {
     this.addBox(x,y,w,h,refName, qryName);
   }
 }
+// On the given canvas, draws a border around each of the selected regions.
 SelectedSet.prototype.update = function(c) {
   c.save();
   c.translate(woff + 0.5, hoff + 0.5);
@@ -259,6 +275,7 @@ SelectedSet.prototype.update = function(c) {
   c.restore();
 }
 
+// Initiate a drag event.
 function mouseDownListener(e) {
   var mousePos = getCursorPosition(e);
   dragging = true;
@@ -267,10 +284,13 @@ function mouseDownListener(e) {
   drag.y = mousePos.y;
 }
 
+// Draws a light highlight of the drag rect.
 function drawDrag(x1, y1, x2, y2) {
   overlayCtx.fillRect(x1 + woff, y1 + hoff, x2 - x1, y2 - y1);
 }
 
+// If the mouse is moving, update the drag box if we're dragging, otherwise
+//  highlight the sequence underneath the mouse.
 function mouseMoveListener(e) {
   var mousePos = getCursorPosition(e);
   selectedRegions.update(overlayCtx);
@@ -291,6 +311,8 @@ function mouseMoveListener(e) {
   }
 }
 
+// If we're just selecting a region, add it to the selectedRegions set, otherwise
+//  we're probably zooming, so initiate a zoomin.
 function mouseUpListener(e) {
   var mousePos = getCursorPosition(e);
   if(e.button == 0) {
@@ -317,10 +339,10 @@ var drag = {};
 
 canvas.addEventListener("mousemove", mouseMoveListener);
 canvas.addEventListener("mousedown", mouseDownListener);
+// Zoom out to previous viewExtents when 'p' is pressed.
 canvas.addEventListener("mouseup", mouseUpListener);
 document.body.addEventListener('keyup', function(e) {
   if(e.which == 80 && viewStack.length > 1) {
-    // Initiate zoom
     zoomout(100);
   }
 });
