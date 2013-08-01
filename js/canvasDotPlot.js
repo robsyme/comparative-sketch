@@ -119,6 +119,13 @@ function scaleX(name, position) {
 function scaleY(name, position) {
     return Math.floor(height - (qryOffSets[name] + position - currentViewExtents.y) * qryScaleFactor);
 }
+// Converts a base position into a pixel coordinate.
+function scaleXAccurate(name, position) {
+  return (refOffSets[name] + position - currentViewExtents.x) * refScaleFactor;
+};
+function scaleYAccurate(name, position) {
+    return height - (qryOffSets[name] + position - currentViewExtents.y) * qryScaleFactor;
+}
 
 // Draw the grid lines that mark where sequences start and end.
 function drawGrid(c) {
