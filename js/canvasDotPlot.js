@@ -337,6 +337,7 @@ function mouseUpListener(e) {
     var ref = getRefName(mousePos.x);
     var qry = getQryName(mousePos.y);
     selectedRegions.toggleBox(ref.x, qry.y, ref.width, qry.height, ref.name, qry.name);
+    drawLinearPlot();
   } else if (e.button == 1) {
     // Initiate zoom
     var x = viewStack[0].x + Math.min(drag.x, mousePos.x) / refScaleFactor;
