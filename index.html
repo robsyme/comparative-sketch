@@ -13,26 +13,28 @@
   </head>
   <body>
     <div class="container">
-    
       <div class="sixteen columns">
         <h1 style="margin-top: 40px">Comparative-sketch</h1>
         <h5>Interactive nucmer vis</h5>
         <hr>
-        <p>
-          To zoom, click and drag using the midddle mouse button.
-          <br/>
-          Press "b" to move back to the previous zoom level.
-          <br/>
-          Press "c" to switch to show the similarity of each match.
-        </p>
-        <div id="dotPlotContainer" style="position: relative">
-          <canvas id="dotPlotOverlay" class="dotPlot"></canvas>
-          <canvas id="dotPlotCanvas" class="dotPlot"></canvas>
+        <div>
+          <p>
+            To zoom, click and drag using the midddle mouse button.
+            <br/>
+            Press "b" to move back to the previous zoom level.
+            <br/>
+            Press "c" to switch to toggle the similarity colouring.
+          </p>
         </div>
-      </div>
-      
-      <div class="sixteen columns">
-        <svg id="linearPlot"></svg>
+        <div>
+          <div id="dotPlotContainer" style="position: relative">
+            <canvas id="dotPlotOverlay" class="dotPlot"></canvas>
+            <canvas id="dotPlotCanvas" class="dotPlot"></canvas>
+          </div>
+        </div>
+        <div>
+          <svg id="linearPlot"></svg>
+        </div>
       </div>
     </div>
     <script type="text/javascript" src="js/canvasDotPlot.js"></script>
