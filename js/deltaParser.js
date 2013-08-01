@@ -6,7 +6,7 @@ function DeltaParser(path) {
     
     var xhReq = new XMLHttpRequest();
     
-    function Hit(rname, qname, rstart, rend, qstart, qend) {
+    function Hit(rname, qname, rstart, rend, qstart, qend, similarity) {
         this.rname = rname;
         this.qname = qname;
         this.rstart = rstart;
@@ -14,6 +14,7 @@ function DeltaParser(path) {
         this.qstart = qstart;
         this.qend = qend;
         this.orientation = qend > qstart;
+        this.similarity = similarity;
     }
     
     function extractMatches(record) {
@@ -32,7 +33,8 @@ function DeltaParser(path) {
         })
         .map(function(line) {
             var coords = line.split(' ').map(function(n) {return Number(n)});
-            var hit = new Hit(refName, qryName, coords[0], coords[1], coords[2], coords[3]);
+            var percentSimilar = (coords[3] + coords[4]) / Math.max(coords[0]+coords[1], coords[2]+coords[3])
+            var hit = new Hit(refName, qryName, coords[0], coords[1], coords[2], coords[3], percentSimilar);
             return hit;
         });
     }

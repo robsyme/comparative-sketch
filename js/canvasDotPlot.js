@@ -69,7 +69,6 @@ var zoomout = function(duration) {
   var step = function() {
     var timestamp = new Date().getTime();
     var progress = Math.min((duration - (end - timestamp)) / duration, 1);
-    console.log(progress);
     var easedFrac = d3.ease('exp')(progress);
     render(easedFrac);
     if(progress < 1) {
@@ -90,7 +89,6 @@ var zoomin = function(duration) {
   var step = function() {
     var timestamp = new Date().getTime();
     var progress = Math.min((duration - (end - timestamp)) / duration, 1);
-    console.log(progress);
     var easedFrac = d3.ease('sin')(progress);
     render(1 - easedFrac);
     return (progress < 1) ? false : true;
@@ -158,6 +156,16 @@ function drawGrid(c) {
 
 // Draw each of the hits.
 function drawHits(c) {
+  
+  if(plotInColour) {
+    var colour = d3.scale
+    .linear()
+    .domain([-1, -0.5, 0, 0.5, 1])
+    .range(["#762a83", "#af8dc3", "#f7f7f7", "#7fbf7b", "#1b7837"])
+    //.range(["#8c510a", "#d8b365", "#f5f5f5", "#5ab4ac", "#01665e"])
+    //.range(["#d73027", "#fc8d59", "#ffffbf", "#91bfdb", "#4575b4"])
+  }
+  
   c.save();
   c.translate(woff + 0.5, hoff + 0.5);
   
@@ -165,7 +173,12 @@ function drawHits(c) {
     c.beginPath();
     c.moveTo(scaleX(hit.rname,hit.rstart) - 0.25, scaleY(hit.qname, hit.qstart) - 0.25);
     c.lineTo(scaleX(hit.rname,hit.rend) + 0.25 , scaleY(hit.qname, hit.qend) + 0.25);
-    c.strokeStyle = hit.qend > hit.qstart ? "blue" : "red";
+    var orientation = hit.qend > hit.qstart ? 1 : -1;
+    if(plotInColour) {
+      c.strokeStyle = colour(hit.similarity * orientation).toString();
+    } else {
+      c.strokeStyle = hit.qend > hit.qstart ? "blue" : "red";
+    }
     c.stroke();
   });
   
@@ -336,13 +349,23 @@ function mouseUpListener(e) {
 var selectedRegions = new SelectedSet();
 var dragging = false;
 var drag = {};
+var plotInColour = false
 
 canvas.addEventListener("mousemove", mouseMoveListener);
 canvas.addEventListener("mousedown", mouseDownListener);
 // Zoom out to previous viewExtents when 'p' is pressed.
 canvas.addEventListener("mouseup", mouseUpListener);
 document.body.addEventListener('keyup', function(e) {
-  if(e.which == 80 && viewStack.length > 1) {
-    zoomout(100);
+  switch (e.which) {
+    case 67:
+    plotInColour = plotInColour ? false : true;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGrid(ctx);
+    drawHits(ctx);
+    break;
+    case 66:
+    if(viewStack.length > 1) {
+      zoomout(100);
+    }
   }
 });
