@@ -411,7 +411,7 @@ function createColourScale() {
   .attr("height", height + 2 * hoff)
   .attr("width", 100)
   .style("position", "relative")
-  .style("left", width + woff)
+  .style("left", (width + woff) + "px")
   .append("g")
   .attr("transform", "translate(" + (woff + 30) + "," + hoff + ")")
   .call(axis);
