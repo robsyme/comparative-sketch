@@ -160,8 +160,11 @@ function drawHits(c) {
   if(plotInColour) {
     var colour = d3.scale
     .linear()
-    .domain([-1, -0.5, 0, 0.5, 1])
-    .range(["#762a83", "#af8dc3", "#f7f7f7", "#7fbf7b", "#1b7837"])
+    .domain([-1, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1])
+    // Rainbow colours taken from: http://dx.doi.org/10.1109/VISUAL.2002.1183788
+    .range(["#D80F0F", "#868600", "#009700", "#008F8F", "#5151FD", "#B700B7", "#5151FD", "#008F8F", "#009700", "#868600", "#D80F0F"])
+    //.domain([-1, -0.5, 0, 0.5, 1])
+    //.range(["#762a83", "#af8dc3", "#f7f7f7", "#7fbf7b", "#1b7837"])
     //.range(["#8c510a", "#d8b365", "#f5f5f5", "#5ab4ac", "#01665e"])
     //.range(["#d73027", "#fc8d59", "#ffffbf", "#91bfdb", "#4575b4"])
   }
