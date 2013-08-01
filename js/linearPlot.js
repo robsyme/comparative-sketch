@@ -44,7 +44,11 @@ function drawLinearPlot() {
   var scaleFactor = Math.min(refScaleFactor,qryScaleFactor);
   
   counter = spacing;
-  var startPositionRef = selectedRefs.map(function(seq) {var oldoffset = counter; counter += seq.length * scaleFactor + spacing; return oldoffset;});
+  var startPositionRef = selectedRefs
+  .map(function(seq) {
+    var oldoffset = counter; counter += seq.length * scaleFactor + spacing;
+    return oldoffset;
+  });
 
   var scalesRef = {};
   var scalesQry = {};
@@ -77,7 +81,12 @@ function drawLinearPlot() {
   }
   
   counter = spacing;
-  var startPositionQry = selectedQrys.sort(compareQrysByAverageHitXPos).map(function(seq) {var oldoffset = counter; counter += seq.length * scaleFactor + spacing; return oldoffset;});
+  var startPositionQry = selectedQrys
+  .sort(compareQrysByAverageHitXPos)
+  .map(function(seq) {
+    var oldoffset = counter; counter += seq.length * scaleFactor + spacing;
+    return oldoffset;
+  });
 
   selectedQrys.forEach(function(seq, i) {
       var rangeStart = startPositionQry[i];
@@ -125,6 +134,7 @@ function drawLinearPlot() {
       .attr("y", y)
       .attr("width", function(d) {return d.length * scaleFactor;})
       .attr("height", 20)
+      .on("mousemove", mouseoverBlock)
       rect.transition()
       .duration(1000)
       .style("opacity", 0.7)
@@ -153,7 +163,18 @@ function drawLinearPlot() {
   .each(drawBlock)
   .each(drawLabel)
   qryGroups.exit().remove()
-
+  
+  function mouseoverBlock(d, i) {
+    if(this.parentElement.classList.contains("refBlockGroup")) {
+      var startPosition = startPositionRef;
+      var startpos = scalesRef[d.name](0);
+    } else {
+      var startPosition = startPositionQry
+      var startpos = scalesQry[d.name](0);
+    }
+    console.log((d3.mouse(this)[0] - startpos) / scaleFactor);
+  }
+  
   var matches = linearPlotSpace.selectAll("path.match").data(byRefName.top(Infinity), function(hit) {return [hit.rname, hit.rstart, hit.rend];})
   matches.enter()
   .append("path")
@@ -186,3 +207,4 @@ function drawLinearPlot() {
   .attr("opacity", 0.2)
   matches.exit().remove()
 }
+
