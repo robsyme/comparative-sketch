@@ -30,9 +30,8 @@ var cumulativeQryLength = qrySeqs.reduce(function(p,c,i,a) {
 }, 0);
 qryOffSets["final"] = cumulativeQryLength;
 
-
 var requestAnimationFrame =  
-        window.requestAnimationFrame || window.webkitRequestAnimationFrame ||
+          window.requestAnimationFrame || window.webkitRequestAnimationFrame ||
         window.mozRequestAnimationFrame || window.msRequestAnimationFrame ||
         window.oRequestAnimationFrame ||
         function(callback) {
@@ -48,21 +47,38 @@ function ViewExtents(x,y,w,h) {
 
 var currentViewExtents = new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)
 var viewStack = [new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength),new ViewExtents(0,0,cumulativeRefLength,cumulativeQryLength)];
-var AnimLengthIn = 10;
-var AnimLengthOut = 5;
-var animationCountDown = 0;
 
-var zoomout = function() {
-  if(animationCountDown < 0) {viewStack.shift();return true;}
-  var animFrac = animationCountDown--/AnimLengthOut;
-  var easedFrac = d3.ease('cubic')(1 - animFrac);
-  render(easedFrac);
+var zoomout = function(duration) {
+  var start = new Date().getTime();
+  var end = start + duration;
+  var step = function() {
+    var timestamp = new Date().getTime();
+    var progress = Math.min((duration - (end - timestamp)) / duration, 1);
+    console.log(progress);
+    var easedFrac = d3.ease('exp')(progress);
+    render(easedFrac);
+    if(progress < 1) {
+      return false;
+    } else {
+      viewStack.shift();
+      return true;
+    }
+    return (progress < 1) ? false : true;
+  }
+  d3.timer(step);
 }
-var zoomin = function() {
-  if(animationCountDown < 0) {return true;}
-  var animFrac = animationCountDown--/AnimLengthIn;
-  var easedFrac = d3.ease('cubic')(animFrac);
-  render(easedFrac);
+var zoomin = function(duration) {
+  var start = new Date().getTime();
+  var end = start + duration;
+  var step = function() {
+    var timestamp = new Date().getTime();
+    var progress = Math.min((duration - (end - timestamp)) / duration, 1);
+    console.log(progress);
+    var easedFrac = d3.ease('sin')(progress);
+    render(1 - easedFrac);
+    return (progress < 1) ? false : true;
+  }
+  d3.timer(step);
 }
 
 var render = function(easedFrac) {  
@@ -88,8 +104,6 @@ qryScaleFactor = height / currentViewExtents.height;
 ctx.clearRect(0, 0, canvas.width, canvas.height);
 drawGrid(ctx);
 drawHits(ctx);
-
-d3.timer(zoomin);
   
 function scaleX(name, position) {
   return Math.floor((refOffSets[name] + position - currentViewExtents.x) * refScaleFactor);
@@ -286,13 +300,12 @@ function mouseUpListener(e) {
     selectedRegions.toggleBox(ref.x, qry.y, ref.width, qry.height, ref.name, qry.name);
   } else if (e.button == 1) {
     // Initiate zoom
-    animationCountDown = AnimLengthIn;
     var x = viewStack[0].x + Math.min(drag.x, mousePos.x) / refScaleFactor;
     var w = Math.abs(mousePos.x - drag.x) / refScaleFactor;
     var y = viewStack[0].y + (height - Math.max(drag.y, mousePos.y)) / qryScaleFactor;
     var h = Math.abs(mousePos.y - drag.y) / qryScaleFactor;
     viewStack.unshift(new ViewExtents(x,y,w,h));
-    d3.timer(zoomin);
+    zoomin(200);
   }
   selectedRegions.update(overlayCtx);
   dragging = false;
@@ -308,7 +321,6 @@ canvas.addEventListener("mouseup", mouseUpListener);
 document.body.addEventListener('keyup', function(e) {
   if(e.which == 80 && viewStack.length > 1) {
     // Initiate zoom
-    animationCountDown = AnimLengthOut;
-    d3.timer(zoomout);
+    zoomout(100);
   }
 });
