@@ -253,16 +253,19 @@ function mouseDownListener(e) {
   drag.y = mousePos.y;
 }
 
+function drawDrag(x1, y1, x2, y2) {
+  overlayCtx.fillRect(x1 + woff, y1 + hoff, x2 - x1, y2 - y1);
+}
+
 function mouseMoveListener(e) {
+  var mousePos = getCursorPosition(e);
+  selectedRegions.update(overlayCtx);
   if(dragging) {
     drag.moved = true;
-    //var mousePos = getCursorPosition(e);
-    
+    drawDrag(drag.x, drag.y, mousePos.x, mousePos.y);
   } else {
-    var mousePos = getCursorPosition(e);
     var ref = getRefName(mousePos.x);
     var qry = getQryName(mousePos.y);
-    selectedRegions.update(overlayCtx);
     if(ref && qry) {
       var x = scaleX(ref.name, 0) + woff;
       var y = scaleY(qry.name, 0) + hoff;
@@ -305,7 +308,6 @@ canvas.addEventListener("mouseup", mouseUpListener);
 document.body.addEventListener('keyup', function(e) {
   if(e.which == 80 && viewStack.length > 1) {
     // Initiate zoom
-    console.log(viewStack);
     animationCountDown = AnimLengthOut;
     d3.timer(zoomout);
   }
