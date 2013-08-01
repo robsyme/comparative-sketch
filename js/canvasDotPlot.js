@@ -353,12 +353,13 @@ function mouseUpListener(e) {
 function createColourScale() {
   var scale = d3.scale
   .linear()
-  .domain([0,1])
+  .domain([1,0])
   .range([0,height]);
   var axis = d3.svg
   .axis()
   .tickFormat(d3.format("percentage"))
-  .scale(scale);
+  .scale(scale)
+  .orient("right");
   
   var colourScale = d3.select("#dotPlotContainer").append("svg")
   
@@ -374,44 +375,44 @@ function createColourScale() {
   
   gradient.append("svg:stop")
   .attr("offset", "0%")
-  .attr("stop-color", "#D80F0F")
+  .attr("stop-color", "#B700B7")
 
   gradient.append("svg:stop")
   .attr("offset", "20%")
-  .attr("stop-color", "#868600")
-
-  gradient.append("svg:stop")
-  .attr("offset", "40%")
-  .attr("stop-color", "#009700")
-
-  gradient.append("svg:stop")
-  .attr("offset", "60%")
-  .attr("stop-color", "#008F8F")
-
-  gradient.append("svg:stop")
-  .attr("offset", "80%")
   .attr("stop-color", "#5151FD")
 
   gradient.append("svg:stop")
+  .attr("offset", "40%")
+  .attr("stop-color", "#008F8F")
+
+  gradient.append("svg:stop")
+  .attr("offset", "60%")
+  .attr("stop-color", "#009700")
+
+  gradient.append("svg:stop")
+  .attr("offset", "80%")
+  .attr("stop-color", "#868600")
+
+  gradient.append("svg:stop")
   .attr("offset", "100%")
-  .attr("stop-color", "#B700B7")
+  .attr("stop-color", "#D80F0F")
   
   colourScale
   .append("svg:rect")
-  .attr("width", 40)
+  .attr("width", 30)
   .attr("height", height)
-  .attr("x", woff)
+  .attr("x", woff )
   .attr("y", hoff)
   .style("fill", "url(#colourGradient)");
   
   colourScale.attr("id", "colourScale")
   .attr("class", "invisible")
   .attr("height", height + 2 * hoff)
-  .attr("width", 60)
+  .attr("width", 100)
   .style("position", "relative")
-  .style("left", "-60px")
+  .style("left", width + woff)
   .append("g")
-  .attr("transform", "translate(" + woff + "," + hoff + ") rotate(90)")
+  .attr("transform", "translate(" + (woff + 30) + "," + hoff + ")")
   .call(axis);
 }
 
