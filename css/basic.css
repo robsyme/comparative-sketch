@@ -4,6 +4,20 @@
   top: 0;
 }
 
+.invisible {
+  opacity: 0;
+}
+
+.visible {
+  opacity: 1;
+}
+
+#colourScale path, line {
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
+}
+
 .selected {
     fill: rgb(41, 255, 0);
     stroke-width: 2px;

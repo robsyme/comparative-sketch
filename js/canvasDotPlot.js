@@ -163,6 +163,7 @@ function drawHits(c) {
     .domain([-1, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1])
     // Rainbow colours taken from: http://dx.doi.org/10.1109/VISUAL.2002.1183788
     .range(["#D80F0F", "#868600", "#009700", "#008F8F", "#5151FD", "#B700B7", "#5151FD", "#008F8F", "#009700", "#868600", "#D80F0F"])
+    // Colour selection below influenced by http://vis.stanford.edu/color-names/analyzer/
     //.domain([-1, -0.5, 0, 0.5, 1])
     //.range(["#762a83", "#af8dc3", "#f7f7f7", "#7fbf7b", "#1b7837"])
     //.range(["#8c510a", "#d8b365", "#f5f5f5", "#5ab4ac", "#01665e"])
@@ -349,6 +350,79 @@ function mouseUpListener(e) {
   dragging = false;
 }
 
+function createColourScale() {
+  var scale = d3.scale
+  .linear()
+  .domain([0,1])
+  .range([0,height]);
+  var axis = d3.svg
+  .axis()
+  .tickFormat(d3.format("percentage"))
+  .scale(scale);
+  
+  var colourScale = d3.select("#dotPlotContainer").append("svg")
+  
+  // Rainbow colours taken from: http://dx.doi.org/10.1109/VISUAL.2002.1183788
+  var gradient = colourScale.append("svg:defs")
+  .append("svg:linearGradient")
+  .attr("id", "colourGradient")
+  .attr("x1", "1")
+  .attr("y1", "0")
+  .attr("x2", "1")
+  .attr("y2", "1")
+  .attr("spreadMethod", "pad")
+  
+  gradient.append("svg:stop")
+  .attr("offset", "0%")
+  .attr("stop-color", "#D80F0F")
+
+  gradient.append("svg:stop")
+  .attr("offset", "20%")
+  .attr("stop-color", "#868600")
+
+  gradient.append("svg:stop")
+  .attr("offset", "40%")
+  .attr("stop-color", "#009700")
+
+  gradient.append("svg:stop")
+  .attr("offset", "60%")
+  .attr("stop-color", "#008F8F")
+
+  gradient.append("svg:stop")
+  .attr("offset", "80%")
+  .attr("stop-color", "#5151FD")
+
+  gradient.append("svg:stop")
+  .attr("offset", "100%")
+  .attr("stop-color", "#B700B7")
+  
+  colourScale
+  .append("svg:rect")
+  .attr("width", 40)
+  .attr("height", height)
+  .attr("x", woff)
+  .attr("y", hoff)
+  .style("fill", "url(#colourGradient)");
+  
+  colourScale.attr("id", "colourScale")
+  .attr("class", "invisible")
+  .attr("height", height + 2 * hoff)
+  .attr("width", 60)
+  .style("position", "relative")
+  .style("left", "-60px")
+  .append("g")
+  .attr("transform", "translate(" + woff + "," + hoff + ") rotate(90)")
+  .call(axis);
+}
+
+function toggleColourScale() {
+  var colourScale = document.getElementById("colourScale")
+  colourScale.classList.toggle("visible");
+  colourScale.classList.toggle("invisible");
+}
+
+createColourScale();
+
 var selectedRegions = new SelectedSet();
 var dragging = false;
 var drag = {};
@@ -361,6 +435,7 @@ canvas.addEventListener("mouseup", mouseUpListener);
 document.body.addEventListener('keyup', function(e) {
   switch (e.which) {
     case 67:
+    toggleColourScale();
     plotInColour = plotInColour ? false : true;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawGrid(ctx);
