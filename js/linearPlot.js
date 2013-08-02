@@ -173,10 +173,6 @@ function drawLinearPlot() {
   
   function mouseoverBlock(d, i) {
     var positionBP = d3.mouse(this)[0] / scaleFactor;
-    console.log("selectedQrys: " + selectedQrys.length)
-    console.log("d3.mouse:    " + d3.mouse(this)[0]);
-    console.log("ScaleFactor: " + scaleFactor);
-    console.log("positionPB:  " + positionBP);
     if(this.parentElement.classList.contains("refBlockGroup")) {
       var xStart = scaleXAccurate(d.name, positionBP) + woff;
       var xEnd = scaleXAccurate(d.name, positionBP) + woff;
