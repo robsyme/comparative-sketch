@@ -17,8 +17,10 @@ canvas.width = width + woff * 2;
 overlay.width = width + woff * 2;
 
 // Open the delta file and parse the hits.
-var delta = new DeltaParser("example-data/stago_lepto.delta");
-var delta = new DeltaParser("example-data/yeasts.delta");
+//var delta = new DeltaParser("example-data/stago_lepto.delta");
+//var delta = new DeltaParser("example-data/yeasts.delta");
+//var delta = new DeltaParser("example-data/mira.delta");
+var delta = new DeltaParser("example-data/celera.delta");
 var refSeqs = delta.refs().sort(function(a,b) {return b.length - a.length;});
 var qrySeqs = delta.qrys().sort(function(a,b) {return b.length - a.length;});
 
